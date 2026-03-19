@@ -19,24 +19,26 @@ class IndexHandler(RequestHandler):
 
 
 class LoginHandler(RestfulHandler, JwtMixin):
-    required_fields = ('name',)
+    required_fields = ('name', 'openid')
 
     async def get(self):
         self.write({'detail': 'welcome'})
 
     async def post(self):
         name = self.get_json_data()['name']
+        address = self.get_json_data()['openid']
         async with self.session as session:
             async with session.begin():
-                account = await self.get_one_or_none(select(User).where(User.name == name))
+                account = await self.get_one_or_none(select(User).where(User.openid == address))
                 if not account:
-                    account = User(openid=name, name=name, sex=1, avatar='')
+                    account = User(openid=address, name=name, sex=1, avatar='')
                     session.add(account)
                     await session.commit()
 
         account = account.to_dict()
         self.set_secure_cookie('userinfo', json_encode(account))
         self.write({
+            'type': 101,  # 协议号RSP_LOGIN
             **account,
             'room': GlobalVar.find_player_room_id(account['uid']),
             'rooms': GlobalVar.room_list(),

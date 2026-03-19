@@ -18,7 +18,7 @@ class Timer(object):
 
     def start_timing(self, timeout: int = 20):
         if timeout:
-            self._timeout = timeout * 2
+            self._timeout = timeout
 
         self._last_time = time.time()
         if not self._is_running:

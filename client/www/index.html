@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+    <title>斗地主</title>
+    <style type="text/css">
+        html, body { width: 100%; height: 100%; padding: 0; margin: 0; background: #000; overflow: hidden; }
+        #game-container { width: 100%; height: 100%; }
+    </style>
+    <script src="js/phaser.min.js"></script>
+    <script src="js/phaser-input.min.js"></script>
+    <link rel="icon" href="data:,">
+</head>
+<body>
+
+<div id="game-container"></div>
+<div id="orientation" style="display:none;"></div>
+
+<script type="module">
+    // --- 第一部分：数据准备（兼容模式） ---
+    var rawTemplateData = '{% raw payload %}';
+    window.login = function() {
+        if (rawTemplateData.indexOf('{%') !== -1) {
+        console.warn("⚠️ 独立开发模式：请手动登录");
+        return null; // 这里改回 null
+        }
+        try {
+            return JSON.parse(rawTemplateData);
+        } catch (e) {
+            return null;
+        }
+    };
+    window.userData = window.login();
+
+    // --- 第二部分：核心逻辑启动 ---
+    // 根据你之前 ls -R 的结果，我们需要引入 boot 和 game
+    import { Boot, Preloader, Login, MainMenu } from './js/boot.mjs';
+    import { Game } from './js/game.mjs';
+    // const { App } = window.Capacitor.Plugins;
+    // App.addListener('appStateChange', ({ isActive }) => {
+    //     if (typeof game === 'undefined' || !game) return;
+    //     if (!isActive) {
+    //         // 只要 App 失去活性（不管是切到钱包还是回桌面），强制全局静音
+    //         game.sound.mute = true; 
+    //         console.log("🤐 手机切走了，已全局静音");
+    //     } else {
+    //         // 切回来，恢复声音
+    //         game.sound.mute = false;
+    //         console.log("🎸 欢迎回来，继续奏乐");
+    //         if (game.input) {
+    //             game.input.reset(); 
+    //         }
+
+    //         // 3. 核心：给浏览器发一个“伪装缩放”指令，强制它重新测绘画面和触摸区
+    //         window.dispatchEvent(new Event('resize'));
+
+    //         // 4. 强制夺回窗口焦点
+    //         window.focus();
+    //         console.log("当前屏幕最顶层的元素是：", document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2));
+    //         // 5. 暴力重绘（改变 1 像素透明度，逼 GPU 刷新）
+    //         document.body.style.opacity = '0.99';
+    //         setTimeout(() => { document.body.style.opacity = '1'; }, 50);
+    //         }
+    // });
+    // window.addEventListener('blur', () => {
+    //     // 只要窗口一丢焦点（不管丢多少），立刻静音
+    //     if (typeof game !== 'undefined' && game) {
+    //         game.sound.mute = true; 
+    //         console.log("🌚 失去焦点（可能拉下了状态栏或切了一半），静音");
+    //     }
+    // });
+
+    // window.addEventListener('focus', () => {
+    //     // 只要焦点回来，立刻恢复声音并重置触摸
+    //     if (typeof game !== 'undefined' && game) {
+    //         game.sound.mute = false; 
+    //         if (game.input) {
+    //             game.input.reset(); // 核心：瞬间解开锁死的触摸状态
+    //         }
+    //         console.log("🌞 焦点恢复，恢复触摸和声音");
+    //     }
+    // });
+    // --- 3. 初始化 Phaser CE (手动挡模式) ---
+    // 参数说明：宽, 高, 渲染模式, 父容器ID
+    // 2520x1080 是标准的 21:9 分辨率
+    const gameConfig = {
+        width: 2002,             
+        height: 900,            
+        renderer: Phaser.AUTO,   
+        parent: 'game-container',
+        transparent: false,
+        antialias: true,
+        state: {
+            // 这里直接定义 State 映射，不需要再调用 game.state.add
+            preload: function() {
+                // 将导入的模块实例挂载到 State 管理器
+                this.state.add('Boot', Boot);
+                this.state.add('Preloader', Preloader);
+                this.state.add('MainMenu', MainMenu);
+                this.state.add('Login', Login);
+                this.state.add('Game', Game);
+            },
+            create: function() {
+                // 设置适配并启动
+                this.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+                this.scale.pageAlignHorizontally = true;
+                this.scale.pageAlignVertically = true;
+                this.state.start('Boot');
+            }
+        }
+    };
+
+    // --- 第三部分：点火运行 ---
+    try {
+        console.log("正在初始化 Phaser 游戏引擎...");
+        const game = new Phaser.Game(gameConfig);
+        window.game = game; // 挂载到 window 方便调试
+    } catch (error) {
+        console.error("❌ 游戏启动失败，详细原因：", error);
+    }
+    
+</script>
+</body>
+</html>

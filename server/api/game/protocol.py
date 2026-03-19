@@ -5,6 +5,9 @@ class Protocol(IntEnum):
 
     ERROR = 0
 
+    REQ_LOGIN = 100
+    RSP_LOGIN = 101
+    
     REQ_ROOM_LIST = 1001
     RSP_ROOM_LIST = 1002
 

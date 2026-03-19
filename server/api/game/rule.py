@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from collections import Counter, defaultdict
 from typing import Dict, List, Tuple, Iterable, Optional
 
@@ -360,7 +361,15 @@ class Rule(object):
         return hand_cards
 
 
-with open('static/rule.json', 'r') as f:
+# 1. 获取当前这个 rule.py 文件的绝对路径，并拿到它所在的文件夹路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 2. 把文件夹路径和文件名 rule.json 拼接在一起，形成一个绝对路径
+rule_file_path = os.path.join(current_dir, 'rule.json')
+
+# 3. 使用绝对路径打开文件（顺便加了 encoding 防止中文乱码）
+with open(rule_file_path, 'r', encoding='utf-8') as f:
+    # 这一行就是你原来的逻辑
     rule = Rule(json.load(f))
     # from random import sample
     # print(rule._find_best_shot([c for c in 'KKKKwW']))

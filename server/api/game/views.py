@@ -12,6 +12,8 @@ from .globalvar import GlobalVar
 from .player import Player
 from .protocol import Protocol
 from .room import Room
+from sqlalchemy import select
+from models import User
 
 
 class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
@@ -31,6 +33,8 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
 
     @property
     def uid(self) -> int:
+        if self.player is None:
+            return 0
         return self.player.uid
 
     @property
@@ -44,11 +48,11 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
     async def data_received(self, chunk):
         logging.info('Received stream data')
 
-    @authenticated
+    # @authenticated
     async def open(self):
-        self.player = GlobalVar.find_player(**self.current_user)
-        self.player.socket = self
-        logging.info('SOCKET[%s] OPEN', self.player.uid)
+        # self.player = GlobalVar.find_player(**self.current_user)
+        # self.player.socket = self
+        logging.info('SOCKET[0] 匿名连接成功')
 
     async def on_message(self, message):
         if message == 'ping':
@@ -65,12 +69,48 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
         if code == Protocol.REQ_ROOM_LIST:
             self.write_message([Protocol.RSP_ROOM_LIST, {'rooms': GlobalVar.room_list()}])
             return
+        if code == Protocol.REQ_LOGIN:
+            name = packet.get('name')
+            address = packet.get('openid')
+            
+            # 1. 查数据库，没有就新建（原汁原味搬过来的）
+            async with self.session as session:
+                async with session.begin():
+                    account = await self.get_one_or_none(select(User).where(User.openid == address))
+                    if not account:
+                        account = User(openid=address, name=name, sex=1, avatar='')
+                        session.add(account)
+                        await session.commit()
+            
+            account_dict = account.to_dict()
+            
+            # 2. 核心：现场绑定玩家身份！(把原先 open 里的活儿在这干了)
+            self.player = GlobalVar.find_player(**account_dict)
+            self.player.socket = self
+            logging.info('SOCKET[%s] 玩家登录成功并绑定', self.player.uid)
+            
+            # 3. 返回 RSP_LOGIN (101) 给客户端绘制大厅
+            response_data = {
+                **account_dict,
+                'room': GlobalVar.find_player_room_id(account_dict['uid']),
+                'rooms': GlobalVar.room_list(),
+                'token': self.jwt_encode(account_dict)
+            }
+            self.write_message([Protocol.RSP_LOGIN, response_data])
+            return
 
+        # ========== 保护机制：如果还没发 100 登录，就不准往下走 ==========
+        if self.player is None:
+            self.write_message([Protocol.ERROR, {'reason': '请先发送 REQ_LOGIN 进行登录'}])
+            return
         await self.player.on_message(code, packet)
 
     def on_close(self):
-        self.player.on_disconnect()
-        logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
+        if self.player:
+            self.player.on_disconnect()
+            logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
+        else:
+            logging.info('SOCKET[0] 匿名连接已断开')
 
     def check_origin(self, origin: str) -> bool:
         return True

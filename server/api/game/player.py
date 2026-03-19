@@ -100,7 +100,15 @@ class Player(object):
                 return
 
         if code == Pt.REQ_LEAVE_ROOM:
-            self.on_disconnect()
+            
+            if self.state in (State.CALL_SCORE, State.PLAYING):
+                # 1. 游戏中途逃跑 -> 触发原作者的“托管”机制
+                # 变成机器人继续打，不影响另外两个玩家
+                self.on_disconnect()  
+                logging.info('Player[%d] 游戏中途逃跑，转为托管状态', self.uid)
+            else:
+                self.handle_leave(Pt.REQ_JOIN_ROOM, {'room': -1})
+                logging.info('Player[%d] 正常退出房间，腾出座位', self.uid)
             return
 
         if self.state == State.INIT:
