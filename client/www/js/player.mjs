@@ -70,7 +70,9 @@ export class Player {
         const style = {font: "34px ", fill: "#fc00d2", align: "center"};
         
         this.uiName = this.game.add.text(sx + 120, sy - 60, '', style);
+        this.uiName.cacheAsBitmap = true;
         this.uiName.anchor.set(0, 0);
+        
 
         
         
@@ -121,50 +123,47 @@ export class Player {
         for (let i = 0; i < length; i++) {
             let pid = this.pokerInHand[i];
             let p = this.findAPoker(pid);
-            p.kill();
+            if (p){
+            p.destroy();
+            }
         }
         this.pokerInHand = [];
+        this._pokerPic = [];
+        
     }
-    createMyTextBtn = (x, y) => {
-                    // 父辈：按钮底板图片 btnBG
-                    let btn = this.game.add.button(x, y, 'btnBG',null, this);
-                    btn.anchor.set(0.5, 0.5);
-                    return btn;
-                };
+    createMyTextBtn = (x, y, fn, name) => {
+                // 父辈：按钮底板图片 btnBG
+                let btn = this.game.add.sprite(x, y,'btn', name);
+                btn.anchor.set(0.5, 0.5);
+                btn.anchor.set(0.5, 0.5);
+                btn.inputEnabled = true;
+                btn.events.onInputDown.add(() => { 
+                    btn.scale.set(0.9); 
+                }, this);
+                btn.events.onInputUp.add(() => { 
+                    btn.scale.set(1.0); 
+                    if(fn) fn.call(this, btn);
+                }, this);
+                return btn;
+            };
     initShotLayer() {
         this.shotLayer = this.game.add.group();
         let group = this.shotLayer;       
         let sy = this.game.world.height * 0.65;
        
-
-        //不出按钮，放在最左边，间距同上
-        let pass = this.createMyTextBtn(0, sy);
-        let passText = this.game.add.text(0, 0, "不出", { font: "36px ", fill: "#000000", align: "center" });
-        passText.anchor.set(0.5);
-        pass.addChild(passText);
         
-        pass.inputEnabled = true;
-        pass.events.onInputUp.add(this.onPass, this);
+        //不出按钮，放在最左边，间距同上
+        let pass = this.createMyTextBtn(0, sy, this.onPass, '不出按钮.png.png');
         group.add(pass);
         // 提示按钮，放在不出按钮右边，间距同上
-        let hint = this.createMyTextBtn(0, sy);
-        let hintText = this.game.add.text(0, 0, "提示", { font: "36px ", fill: "#000000", align: "center" });
-        hintText.anchor.set(0.5);
-        hint.addChild(hintText);
-        hint.inputEnabled = true;
-        hint.events.onInputUp.add(this.onHint, this);
+        let hint = this.createMyTextBtn(0, sy, this.onHint, '提示按钮.png.png');
         group.add(hint);
         // 出牌按钮，放在提示按钮右边，间距同上
-        let shot = this.createMyTextBtn(0, sy);
-        let shotText = this.game.add.text(0, 0, "出牌", { font: "36px ", fill: "#000000", align: "center" });
-        shotText.anchor.set(0.5);
-        shot.addChild(shotText);
-        shot.inputEnabled = true;
-        shot.events.onInputUp.add(this.onShot, this);
+        let shot = this.createMyTextBtn(0, sy, this.onShot, '出牌按钮.png.png');
         group.add(shot);
         this.game.world.bringToTop(group);
         group.forEach(function (child) {
-            child.kill();
+            child.kill();        
         });
     }
 
@@ -174,14 +173,13 @@ export class Player {
     }
 
     say(str) {
-        let style = {font: "40px ", fill: "#fffb00", align: "center"};
         let sx = this.uiName.x + this.uiName.width / 2 ;
         let sy = this.uiName.y - this.uiName.height ;
-        let text = this.game.add.text(sx, sy, str, style);
+        let text = this.game.add.sprite(sx, sy, 'text', str);
         if (this.uiHead.scale.x === -2) {
             text.x = text.x - text.width - 100;
         }
-        
+  
         this.game.time.events.add(2000, text.destroy, text);
     }
 
@@ -235,7 +233,8 @@ export class Player {
         let bigger = this.hint(this.hintPoker);
         if (bigger.length === 0) {
             if (this.hintPoker === this.lastTurnPoker) {
-                this.say("没有能大过的牌");
+                this.say("等待玩家加入文本.png.png");
+                
                 // this.onPass(btn);
             } else {
                 this.pokerUnSelected(this.hintPoker);
@@ -278,7 +277,7 @@ export class Player {
         let cardsA = Poker.toCards(shotPoker);
         let valueA = Rule.cardsValue(cardsA);
         if (!valueA[0]) {
-            return '出牌不合法';
+            return '出牌不合法文本.png.png';
         }
         let cardsB = Poker.toCards(lastTurnPoker);
         if (cardsB.length === 0) {
@@ -286,13 +285,13 @@ export class Player {
         }
         let valueB = Rule.cardsValue(cardsB);
         if (valueA[0] !== valueB[0] && valueA[1] < 1000) {
-            return '出牌类型跟上家不一致';
+            return '出牌类型跟上家不一致文本.png.png';
         }
 
         if (valueA[1] > valueB[1]) {
             return '';
         }
-        return '出牌需要大于上家';
+        return '出牌需要大于上家文本.png.png';
     }
 
     playPoker(lastTurnPoker) {
@@ -495,9 +494,14 @@ export class NetPlayer extends Player {
         for (let i = 0; i < length; i++) {
             const pid = this.pokerInHand[i];
             const p = this.findAPoker(pid);
-            p.kill();
+            if (p){
+                p.destroy();
+            }
+            
         }
         this.pokerInHand = [];
+        this._pokerPic = [];
+        
     }
 
     dealPokerAnim(p, i) {
@@ -530,10 +534,14 @@ export class NetPlayer extends Player {
         const style = {font: "34px ", fill: "#fc00d2", align: "center"};
         if (this.seat === 1) {
             this.uiName = this.game.add.text(sx - 120, sy + 40, '等待玩家加入', style);
+            this.uiName.cacheAsBitmap = true;
             this.uiName.anchor.set(1, 0);
+            
         } else {
             this.uiName = this.game.add.text(sx + 140, sy + 40, '等待玩家加入', style);
+            this.uiName.cacheAsBitmap = true;
             this.uiName.anchor.set(0, 0);
+           
         }
     }
 
@@ -542,8 +550,10 @@ export class NetPlayer extends Player {
         let showName = name || "";
         if (name && name.length > 7) { showName = name.slice(0, 3) + '..' + name.slice(-3); }
         if (uid) {
+            this.uiName.cacheAsBitmap = false;
             this.uiName.text = showName;
         } else {
+            this.uiName.cacheAsBitmap = false;
             this.uiName.text = '等待玩家加入';
         }
     }

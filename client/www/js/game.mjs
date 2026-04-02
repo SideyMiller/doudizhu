@@ -63,9 +63,14 @@ class Observer {
         if (subscribers.hasOwnProperty(key)) {
             const index = subscribers.indexOf(cb);
             if (index > -1) {
-                subscribers.splice(index, 1);
+                subscribers[key].splice(index, 1);
             }
         }
+    }
+    clear() {
+        this.subscribers = {};
+        this.state = {};
+        
     }
 }
 
@@ -113,7 +118,6 @@ export class Game {
         const width = this.game.world.width;
         const height = this.game.world.height;
 
-
         // 房间信息条
         const titleBar = this.game.add.text(width / 2, 0, `房间号:${0} 底分: 0 倍数: 0`, {
             font: "40px",
@@ -121,109 +125,29 @@ export class Game {
             align: "center"
         });
         titleBar.anchor.set(0.5, 0);
+        
         observer.subscribe('room', function (room) {
             titleBar.text = `房间号:${room.id} 底分: ${room.origin} 倍数: ${room.multiple}`;
         });
-        // 复用设置面板逻辑
-        this.isSettingOpen = false;
-        this.gotoSetting = function() {
-            // 简单设置面板
-            if (this.isSettingOpen) return; 
-            // 【新增锁】：标记设置面板现在是打开状态
-            this.isSettingOpen = true;
-
-            
-            let panelX = this.game.world.width / 2;
-            let panelY = this.game.world.height / 2;
-
-            // 使用你准备好的 winBG 作为大背景
-            let panel = this.game.add.sprite(panelX, panelY, 'winBG');
-            panel.anchor.set(0.5, 0.5);
-            panel.inputEnabled = true;
-            let titleText = this.game.add.text(0, -170, "设置菜单", { 
-                    font: "50px ", 
-                    fill: "#ffffff", 
-                    align: "center" 
-                });
-            titleText.anchor.set(0.5, 0.5);
-            panel.addChild(titleText); // 挂载到面板
-            
-            
-            let musicBtnText = window.musicOn ? "关闭音乐" : "开启音乐";
-            let soundBtnText = window.soundOn ? "关闭提示音" : "开启提示音";
-            let musicBtn = this.createMyTextBtn(0, -60);
-            let mText = this.game.add.text(0, 0, musicBtnText, { font: "36px ", fill: "#000000", align: "center" });
-            mText.anchor.set(0.5);
-            musicBtn.addChild(mText);
-            musicBtn.inputEnabled = true;
-            musicBtn.events.onInputUp.add(function () {
-                window.musicOn = !window.musicOn;
-                mText.text = window.musicOn ? "关闭音乐" : "开启音乐";
-                // 控制背景音乐播放/暂停
-                if (window._bgMusic) {
-                    if (window.musicOn) {
-                        window._bgMusic.resume();
-                    } else {
-                        window._bgMusic.pause();
-                    }
-                }
-            }, this);
-            panel.addChild(musicBtn); // 挂载到面板
-
-            
-            let soundBtn = this.createMyTextBtn(0, 40);
-            let sText = this.game.add.text(0, 0, soundBtnText, { font: "36px ", fill: "#000000", align: "center" });
-            sText.anchor.set(0.5);
-            soundBtn.addChild(sText);
-            soundBtn.inputEnabled = true;
-            soundBtn.events.onInputUp.add(function () {
-                window.soundOn = !window.soundOn;
-                sText.text = window.soundOn ? "关闭提示音" : "开启提示音";
-            }, this);
-            panel.addChild(soundBtn); // 挂载到面板
-            
-            // 关闭设置面板按钮
-            let closeBtn = this.createMyTextBtn(0, 140);
-            let cText = this.game.add.text(0, 0, "关闭设置", { font: "36px ", fill: "#000000", align: "center" });
-            cText.anchor.set(0.5);
-            closeBtn.addChild(cText);
-            closeBtn.inputEnabled = true;
-            closeBtn.events.onInputUp.add(function () {
-                panel.destroy();
-                
-                this.isSettingOpen = false;
-            }, this);
-            panel.addChild(closeBtn); // 挂载到面板
-            
-        };
+        
         // 设置按钮，放在titleBar左侧
         const btnY = titleBar.y + titleBar.height / 2 + 30;
         const btnX = width / 2 - titleBar.width / 2 -550 / 3;
-        let settingBtn = this.createMyTextBtn(btnX, btnY);
-        let setText = this.game.add.text(0, 0, "设置", { font: "36px ", fill: "#000000", align: "center" });
-        setText.anchor.set(0.5);
-        settingBtn.addChild(setText);
-        settingBtn.inputEnabled = true;
-        settingBtn.events.onInputUp.add(this.gotoSetting, this);
+        let settingBtn = this.createMyTextBtn(btnX, btnY, this.gotoSetting, '设置.png.png');
         this.game.world.add(settingBtn);
 
 
         
 
         // 创建退出按钮
-        this.exitBtn = this.createMyTextBtn(width * 0.4, height * 0.6);
-        let exitText = this.game.add.text(0, 0, "退出", { font: "36px ", fill: "#000000", align: "center" });
-        exitText.anchor.set(0.5);
-        this.exitBtn.addChild(exitText);
-        this.exitBtn.inputEnabled = true;
-        this.exitBtn.events.onInputUp.add(this.quitGame, this);
+        this.exitBtn = this.createMyTextBtn(width * 0.4, height * 0.6, this.quitGame, '退出按钮.png.png');
         this.game.world.add(this.exitBtn);
 
         // 创建准备按钮
         const that = this;
         const countdown = this.game.add.text(width / 2, height / 2, '10', {
             font: "60px ",
-            fill: "rgb(255, 255, 255)a00",
+            fill: "#ffffff",
             align: "center"
         });
         
@@ -239,12 +163,7 @@ export class Game {
             }
         });
 
-        let ready = this.createMyTextBtn(width * 0.6, height * 0.6);
-        let readyText = this.game.add.text(0, 0, "准备", { font: "36px ", fill: "#000000", align: "center" });
-        readyText.anchor.set(0.5);
-        ready.addChild(readyText);
-        ready.inputEnabled = true;
-        ready.events.onInputUp.add(this.ReadyGame, this);
+        let ready = this.createMyTextBtn(width * 0.6, height * 0.6, this.ReadyGame, '准备按钮.png.png');
         this.game.world.add(ready);
 
         
@@ -254,39 +173,19 @@ export class Game {
 
         //不抢地主按钮
         const group = this.game.add.group();
-        let pass = this.createMyTextBtn(width * 0.4, height * 0.6);
-        let passText = this.game.add.text(0, 0, "不抢", { font: "36px ", fill: "#000000", align: "center" });
-        passText.anchor.set(0.5);
-        pass.addChild(passText);
-        pass.inputEnabled = true;
-        pass.events.onInputUp.add(this.PassGame, this);
+        let pass = this.createMyTextBtn(width * 0.4, height * 0.6, this.PassGame, '不抢按钮.png.png');
         group.add(pass);
 
         //抢地主按钮
-        let rob = this.createMyTextBtn(width * 0.6, height * 0.6);
-        let robText = this.game.add.text(0, 0, "抢地主", { font: "36px ", fill: "#000000", align: "center" });
-        robText.anchor.set(0.5);
-        rob.addChild(robText);
-        rob.inputEnabled = true;
-        rob.events.onInputUp.add(this.RobGame, this);
+        let rob = this.createMyTextBtn(width * 0.6, height * 0.6, this.RobGame, '抢地主按钮.png.png');
         group.add(rob);
 
-        //一分按钮
-        // let one = this.createMyTextBtn(width * 0.6, height * 0.6);
-        // let oneText = this.game.add.text(0, 0, "一分", { font: "36px ", fill: "#000000", align: "center" });
-        // oneText.anchor.set(0.5);
-        // one.addChild(oneText);
-        // one.inputEnabled = true;
-        // one.events.onInputUp.add(this.OneGame, this);
+        // //一分按钮
+        // let one = this.createMyTextBtn(width * 0.6, height * 0.6, this.OneGame, '一分按钮.png.png');
         // group.add(one);
 
-        //两分按钮
-        // let two = this.createMyTextBtn(width * 0.6, height * 0.6);
-        // let twoText = this.game.add.text(0, 0, "两分", { font: "36px ", fill: "#000000", align: "center" });
-        // twoText.anchor.set(0.5);
-        // two.addChild(twoText);
-        // two.inputEnabled = true;
-        // two.events.onInputUp.add(this.TwoGame, this);
+        // //两分按钮
+        // let two = this.createMyTextBtn(width * 0.6, height * 0.6, this.TwoGame, '两分按钮.png.png');
         // group.add(two);
         group.visible = false;
 
@@ -296,14 +195,14 @@ export class Game {
             observer.set('countdown', -1);
         });
 
-        console.log("正在接管全局服务器连接...");
+        
         this.socket = window.globalSocket; // 拿来主义，直接用 Login 场景建好的全局连接
 
         if (this.socket) {
         // 【核心改动】：不要赋值给 .websocket.onmessage
         // 而是把 Game 场景的处理函数，挂载到我们刚才建的“转接头”上
         this.socket.onMessageCallback = this.onmessage.bind(this);
-        console.log('socket onopen');
+        
         this.send_message([Protocol.REQ_ROOM_LIST, {}]);
         this.send_message([Protocol.REQ_JOIN_ROOM, {"room": -1, "level": observer.get('baseScore')}]);
            
@@ -311,32 +210,105 @@ export class Game {
             console.error("致命错误：全局 Socket 未初始化！");
         }
     }
+
+    onchangemusic() {
+        window.musicOn = !window.musicOn;
+            // 控制背景音乐播放/暂停
+            if (window._bgMusic) {
+                if (window.musicOn) {
+                    window._bgMusic.resume();
+                } else {
+                    window._bgMusic.pause();
+                }
+            }
+        if (this.musicBtn) {
+            this.musicBtn.frameName = window.musicOn ? '关闭音乐.png' : '开启音乐按钮.png';
+        }
+    }
+    onchangesound() {
+        window.soundOn = !window.soundOn; 
+        if (this.soundBtn) {
+            this.soundBtn.frameName = window.soundOn ? '关闭提示音.png' : '开启提示音按钮.png';
+        }
+
+    }
+    onsettingbtn() {
+        for (let i = this.panel.children.length - 1; i >= 0; i--) {
+                this.panel.children[i].visible = false; // 先隐藏所有子元素
+            }
+            this.panel.visible = false; // 最后隐藏面板自己
+            this.panel.exists = false;
+            this.isSettingOpen = false;
+
+        
+    }
+
+    gotoSetting() {
+        // 简单设置面板
+        if (this.isSettingOpen) return; 
+        // 【新增锁】：标记设置面板现在是打开状态
+        this.isSettingOpen = true;
+
+        
+        let panelX = this.game.world.width / 2;
+        let panelY = this.game.world.height / 2;
+
+        // 使用你准备好的 winBG 作为大背景
+        this.panel = this.game.add.sprite(panelX, panelY, 'winBG');
+        this.panel.anchor.set(0.5, 0.5);
+        let titleText = this.game.add.sprite(0, -170, 'settingmenu', null);
+        titleText.anchor.set(0.5, 0.5);
+        this.panel.addChild(titleText); // 挂载到面板
+         
+        this.musicBtn = this.createMyTextBtn(0, -60, this.onchangemusic, window.musicOn ? '关闭音乐.png' : '开启音乐按钮.png');
+        this.panel.addChild(this.musicBtn); // 挂载到面板
+
+        this.soundBtn = this.createMyTextBtn(0, 40, this.onchangesound, window.soundOn ? '关闭提示音.png' : '开启提示音按钮.png');
+        this.panel.addChild(this.soundBtn); // 挂载到面板
+
+        // 关闭设置面板按钮
+        let closeBtn = this.createMyTextBtn(0, 140, this.onsettingbtn, '关闭设置按钮.png');
+        this.panel.addChild(closeBtn); // 挂载到面板
+    }
     RobGame() {
             if (this.players[0] && this.players[0].hideTimer) this.players[0].hideTimer();
-            if (window.soundOn && this.game.add.audio) {
-                this.game.add.audio('f_score_1').play();
+            if (window.soundOn) {
+                if (this.game.gameAudio['f_score_1']) {
+                    this.game.gameAudio['f_score_1'].play();
+                }
             }
             this.send_message([Protocol.REQ_CALL_SCORE, {"rob": 1}]);
         };
 
     PassGame() {
             if (this.players[0] && this.players[0].hideTimer) this.players[0].hideTimer();
-            if (window.soundOn && this.game.add.audio) {
-            this.game.add.audio('f_score_0').play();
+            if (window.soundOn) {
+                if (this.game.gameAudio['f_score_0']) {
+                    this.game.gameAudio['f_score_0'].play();
+                }
             }
             this.send_message([Protocol.REQ_CALL_SCORE, {"rob": 0}]);
-            };
+        };
 
     ReadyGame() {
             this.send_message([Protocol.REQ_READY, {"ready": 1}]);
             observer.set('countdown', 10);
         };
-    createMyTextBtn = (x, y) => {
-                    // 父辈：按钮底板图片 btnBG
-                    let btn = this.game.add.button(x, y, 'btnBG',null, this);
-                    btn.anchor.set(0.5, 0.5);
-                    return btn;
-                };
+    createMyTextBtn = (x, y, fn, name) => {
+                // 父辈：按钮底板图片 btnBG
+                let btn = this.game.add.sprite(x, y,'btn', name);
+                btn.anchor.set(0.5, 0.5);
+                btn.anchor.set(0.5, 0.5);
+                btn.inputEnabled = true;
+                btn.events.onInputDown.add(() => { 
+                    btn.scale.set(0.9); 
+                }, this);
+                btn.events.onInputUp.add(() => { 
+                    btn.scale.set(1.0); 
+                    if(fn) fn.call(this);
+                }, this);
+                return btn;
+            };
     onopen() {
         console.log('socket onopen');
         this.socket.send([Protocol.REQ_ROOM_LIST, {}]);
@@ -356,7 +328,7 @@ export class Game {
         const code = message[0], packet = message[1];
         switch (code) {
             case Protocol.RSP_ROOM_LIST:
-                console.log(code, packet);
+                // console.log(code, packet);
                 break;
             case Protocol.RSP_JOIN_ROOM:
                 observer.set('room', packet['room']);
@@ -392,8 +364,9 @@ export class Game {
                 const landlord = packet['landlord'];
                 this.whoseTurn = this.uidToSeat(playerId);
 
-                const hanzi = ['不抢', "抢地主"];
+                const hanzi = ['不抢文本.png.png', "欢迎回来.png.png"];
                 this.players[this.whoseTurn].say(hanzi[rob]);
+                
 
                 observer.set('rob', false);
                 if (landlord === -1) {
@@ -427,33 +400,37 @@ export class Game {
                 });
 
                 this.whoseTurn = this.uidToSeat(winner);
-
+                // 判断自己是否胜利
+                    let mySeat = 0; // 默认本地玩家在0号位
+                    let isMeLandlord = this.players[mySeat].isLandlord;
+                    let winnerIsLandlord = this.players[this.whoseTurn].isLandlord;
+                    let isWin = (isMeLandlord && winnerIsLandlord) || (!isMeLandlord && !winnerIsLandlord);
                 function gameOver() {
                     // 先停掉music_room
                     if (window._bgMusic) {
                         window._bgMusic.stop();
                     }
-                    // 判断自己是否胜利
-                    let mySeat = 0; // 默认本地玩家在0号位
-                    let isMeLandlord = this.players[mySeat].isLandlord;
-                    let winnerIsLandlord = this.players[this.whoseTurn].isLandlord;
-                    let isWin = (isMeLandlord && winnerIsLandlord) || (!isMeLandlord && !winnerIsLandlord);
+                    
 
                     // 播放胜利/失败音乐
-                    if (window.musicOn && this.game.add.audio) {
+                    if (window.musicOn) {
                         if (isWin) {
-                            this.game.add.audio('music_win').play();
+                            if (this.game.gameAudio['music_win']) {
+                            this.game.gameAudio['music_win'].play();
+                            }
                         } else {
-                            this.game.add.audio('music_lose').play();
+                            if (this.game.gameAudio['music_lose']) {
+                            this.game.gameAudio['music_lose'].play();
+                            }
                         }
                     }
 
                     // 在屏幕中央显示“你赢了”或“你输了”，3秒后自动消失
-                    let style = {font: "64px ", fill: isWin ? "#FFD700" : "#aaa", align: "center"};
-                    let resultText = this.game.add.text(this.game.world.width / 2, this.game.world.height / 2, isWin ? "你赢了" : "你输了", style);
+                
+                    let resultText = this.game.add.sprite(this.game.world.width / 2, this.game.world.height / 2, 'text', isWin ? '你赢了文本.png.png' : '你输了文本.png.png');       
                     resultText.anchor.set(0.5);
                     // 3秒后让文本消失
-                    this.game.time.events.add(3000, function() {
+                    this.game.time.events.add(2000, function() {
                         resultText.destroy();
                     }, this);
                     this.exitBtn.visible = true;
@@ -477,6 +454,7 @@ export class Game {
     cleanWorld() {
         this.players.forEach(function (player) {
             player.cleanPokers();
+            player.isLandlord = false;
             // player.uiLeftPoker.kill();
             player.uiHead.loadTexture('nongmin');
         });
@@ -519,9 +497,10 @@ export class Game {
 
     dealPoker(pokers) {
        
-        if (window.soundOn && this.game.add.audio) {
-            let startAudio = this.game.add.audio('start');
-            startAudio.play();
+        if (window.soundOn) {
+            if (this.game.gameAudio['start']) {
+                    this.game.gameAudio['start'].play();
+                }
         }
         // 添加一张底牌
         let p = new Poker(this, 55, 55);
@@ -608,14 +587,16 @@ export class Game {
         let turnPlayer = this.players[this.whoseTurn];
         let pokers = packet['pokers'];
         if (pokers.length === 0) {
-            this.players[this.whoseTurn].say("不出");
+            this.players[this.whoseTurn].say("不出文本.png.png");
             // 不出时可加“不要”语音
-            if (window.soundOn && this.game.add.audio && this.game.cache.checkSoundKey('buyao')) {
-                this.game.add.audio('buyao').play();
+            if (window.soundOn) {
+                if (this.game.gameAudio['buyao']) {
+                    this.game.gameAudio['buyao'].play();
+                }
             }
         } else {
             // 精准报幕语音
-            if (window.soundOn && this.game.add.audio) {
+            if (window.soundOn) {
                 // 1. 获取牌型和index
                 let cards = Poker.toCards(pokers);
                 let value = Rule.cardsValue(cards);
@@ -650,8 +631,8 @@ export class Game {
                     key = 'liandui';
                 } 
                 // 3. 播放音频（存在才播）
-                if (this.game.cache.checkSoundKey(key)) {
-                    this.game.add.audio(key).play();
+                if (this.game.gameAudio[key]) {
+                    this.game.gameAudio[key].play();
                 }
             }
             let pokersPic = {};
@@ -681,6 +662,20 @@ export class Game {
             this.tablePokerPic = pokersPic;
             this.lastShotPlayer = turnPlayer;
             turnPlayer.arrangePoker();
+
+            let remainCount = turnPlayer.pokerInHand.length;
+            if (remainCount === 2) {
+                // 剩2张，播放报警音效 (假设你的音频key叫 'baojing2')
+                if (window.soundOn && this.game.gameAudio['baojing2']) {
+                    this.game.gameAudio['baojing2'].play();
+                }
+            } else if (remainCount === 1) {
+                // 剩1张，播放报警音效 (假设音频key叫 'baojing1')
+                if (window.soundOn && this.game.gameAudio['baojing1']) {
+                    this.game.gameAudio['baojing1'].play();
+                }
+            }
+
         }
         if (turnPlayer.pokerInHand.length > 0) {
             this.whoseTurn = (this.whoseTurn + 1) % 3;
@@ -721,13 +716,19 @@ export class Game {
             // 注意：确保你的 Protocol 里有 REQ_LEAVE_ROOM 这个枚举，通常是 1002 或类似的数字
             this.send_message([Protocol.REQ_LEAVE_ROOM, {}]);
         }
-        if (window.musicOn && this.game.add.audio) {
+        
+        if (typeof observer !== 'undefined') {
+            observer.clear();
+        }
+        this.game.tweens.removeAll();
+        
+        if (window.musicOn && this.game.gameAudio['bg_room']){
             // 先停掉当前正在播放的音乐
             if (window._bgMusic) {
                 window._bgMusic.stop();
             }
             // 重新创建大厅音乐，【关键】必须把它赋值给 window._bgMusic
-            window._bgMusic = this.game.add.audio('music_room');
+            window._bgMusic = this.game.gameAudio['bg_room'];
             // 播放它 (如果大厅音乐需要循环播放，可以在 play 里加参数，比如 play('', 0, 1, true))
             window._bgMusic.play('', 0, 1, true);
             
@@ -744,6 +745,14 @@ export class Game {
         if (this.players[this.whoseTurn] && this.players[this.whoseTurn].showTimer) {
             this.players[this.whoseTurn].showTimer(seconds);
         }
+    }
+    shutdown() {
+    // 离开这个场景时，把全局的输入监听全杀掉
+        this.game.input.onDown.removeAll();
+        this.game.input.onUp.removeAll();
+        this.game.input.onTap.removeAll();
+        
+        // 这样进入新场景时，就是一个绝对干净的白板
     }
 }
 
