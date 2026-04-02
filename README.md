@@ -14,7 +14,8 @@
 
 Quick build APK
 ```shell
-    cd client android
+    cd client
+    cd android
     ./gradlew assembleDebug  
 ```
 Quick Start Client
