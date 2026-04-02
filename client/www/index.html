@@ -18,11 +18,42 @@
 <div id="orientation" style="display:none;"></div>
 
 <script type="module">
+    (function() {
+            let textChangeCount = 0;
+            let canvasRedrawCount = 0;
+
+            // 1. 拦截 Phaser 层的文本修改 (只统计有效修改)
+            const originalSetText = Phaser.Text.prototype.setText;
+            Phaser.Text.prototype.setText = function(text) {
+                if (this.text !== text) {
+                    textChangeCount++;
+                }
+                return originalSetText.call(this, text);
+            };
+
+            // 2. 拦截 PIXI 底层的 Canvas 重绘 (最耗 CPU、内存和触发 minor faults 的真凶)
+            if (typeof PIXI !== 'undefined' && PIXI.Text) {
+                const originalUpdateText = PIXI.Text.prototype.updateText;
+                PIXI.Text.prototype.updateText = function() {
+                    canvasRedrawCount++;
+                    originalUpdateText.call(this);
+                };
+            }
+
+            // 3. 每秒汇总一次输出，不刷屏不影响性能
+            setInterval(() => {
+                if (textChangeCount > 0 || canvasRedrawCount > 0) {
+                    console.log(`[底层重绘验证] 过去1秒: 文本被setText ${textChangeCount} 次 -> 导致底层Canvas彻底重绘并重新申请内存 ${canvasRedrawCount} 次`);
+                    textChangeCount = 0;
+                    canvasRedrawCount = 0;
+                }
+            }, 1000);
+        })();
+
     // --- 第一部分：数据准备（兼容模式） ---
     var rawTemplateData = '{% raw payload %}';
     window.login = function() {
         if (rawTemplateData.indexOf('{%') !== -1) {
-        console.warn("⚠️ 独立开发模式：请手动登录");
         return null; // 这里改回 null
         }
         try {
@@ -37,60 +68,60 @@
     // 根据你之前 ls -R 的结果，我们需要引入 boot 和 game
     import { Boot, Preloader, Login, MainMenu } from './js/boot.mjs';
     import { Game } from './js/game.mjs';
-    // const { App } = window.Capacitor.Plugins;
-    // App.addListener('appStateChange', ({ isActive }) => {
-    //     if (typeof game === 'undefined' || !game) return;
-    //     if (!isActive) {
-    //         // 只要 App 失去活性（不管是切到钱包还是回桌面），强制全局静音
-    //         game.sound.mute = true; 
-    //         console.log("🤐 手机切走了，已全局静音");
-    //     } else {
-    //         // 切回来，恢复声音
-    //         game.sound.mute = false;
-    //         console.log("🎸 欢迎回来，继续奏乐");
-    //         if (game.input) {
-    //             game.input.reset(); 
-    //         }
+    const { App } = window.Capacitor.Plugins;
+    App.addListener('appStateChange', ({ isActive }) => {
+        if (typeof game === 'undefined' || !game) return;
+        if (!isActive) {
+            // 只要 App 失去活性（不管是切到钱包还是回桌面），强制全局静音
+            game.sound.mute = true; 
+            
+        } else {
+            // 切回来，恢复声音
+            game.sound.mute = false;
+            
+            if (game.input) {
+                game.input.reset(); 
+            }
 
-    //         // 3. 核心：给浏览器发一个“伪装缩放”指令，强制它重新测绘画面和触摸区
-    //         window.dispatchEvent(new Event('resize'));
+            // 3. 核心：给浏览器发一个“伪装缩放”指令，强制它重新测绘画面和触摸区
+            window.dispatchEvent(new Event('resize'));
 
-    //         // 4. 强制夺回窗口焦点
-    //         window.focus();
-    //         console.log("当前屏幕最顶层的元素是：", document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2));
-    //         // 5. 暴力重绘（改变 1 像素透明度，逼 GPU 刷新）
-    //         document.body.style.opacity = '0.99';
-    //         setTimeout(() => { document.body.style.opacity = '1'; }, 50);
-    //         }
-    // });
-    // window.addEventListener('blur', () => {
-    //     // 只要窗口一丢焦点（不管丢多少），立刻静音
-    //     if (typeof game !== 'undefined' && game) {
-    //         game.sound.mute = true; 
-    //         console.log("🌚 失去焦点（可能拉下了状态栏或切了一半），静音");
-    //     }
-    // });
+            // 4. 强制夺回窗口焦点
+            window.focus();
+           
+            // 5. 暴力重绘（改变 1 像素透明度，逼 GPU 刷新）
+            document.body.style.opacity = '0.99';
+            setTimeout(() => { document.body.style.opacity = '1'; }, 50);
+            }
+    });
+    window.addEventListener('blur', () => {
+        // 只要窗口一丢焦点（不管丢多少），立刻静音
+        if (typeof game !== 'undefined' && game) {
+            game.sound.mute = true; 
+            
+        }
+    });
 
-    // window.addEventListener('focus', () => {
-    //     // 只要焦点回来，立刻恢复声音并重置触摸
-    //     if (typeof game !== 'undefined' && game) {
-    //         game.sound.mute = false; 
-    //         if (game.input) {
-    //             game.input.reset(); // 核心：瞬间解开锁死的触摸状态
-    //         }
-    //         console.log("🌞 焦点恢复，恢复触摸和声音");
-    //     }
-    // });
+    window.addEventListener('focus', () => {
+        // 只要焦点回来，立刻恢复声音并重置触摸
+        if (typeof game !== 'undefined' && game) {
+            game.sound.mute = false; 
+            if (game.input) {
+                game.input.reset(); // 核心：瞬间解开锁死的触摸状态
+            }
+            
+        }
+    });
     // --- 3. 初始化 Phaser CE (手动挡模式) ---
     // 参数说明：宽, 高, 渲染模式, 父容器ID
     // 2520x1080 是标准的 21:9 分辨率
     const gameConfig = {
         width: 2002,             
         height: 900,            
-        renderer: Phaser.AUTO,   
+        renderer: Phaser.WEBGL,   
         parent: 'game-container',
         transparent: false,
-        antialias: true,
+        antialias: false,
         state: {
             // 这里直接定义 State 映射，不需要再调用 game.state.add
             preload: function() {
@@ -106,6 +137,39 @@
                 this.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
                 this.scale.pageAlignHorizontally = true;
                 this.scale.pageAlignVertically = true;
+                this.scale.setResizeCallback(function() {
+                let canvas = this.game.canvas;
+                if (canvas && canvas.style.width) {
+                        // 拿到带有小数的 CSS 宽高
+                        let cssW = parseFloat(canvas.style.width);
+                        let cssH = parseFloat(canvas.style.height);
+                        
+                        // 强行向下取整，抹除所有小数点！
+                        canvas.style.width = Math.floor(cssW) + 'px';
+                        canvas.style.height = Math.floor(cssH) + 'px';
+                    }
+                }, this);
+                this.game.time.desiredFps = 60; // 期望帧率死锁在 60
+                this.game.forceSingleUpdate = true; // 禁止引擎为了追赶掉帧而多跑逻辑
+                this.game.time.advancedTiming = true; // 开启高级时间计算，稳定 Tween
+                const originalUpdateRender = this.game.updateRender;
+                let lastRenderTime = 0;
+                
+                this.game.updateRender = function(time) {
+                    let now = performance.now();
+                    // 16 毫秒约等于 60 帧 (1000ms / 60)。
+                    // 只有距离上次绘制超过了 16 毫秒，才允许底层调用 PIXI.WebGLRenderer.render
+                    if (now - lastRenderTime >= 16) {
+                        lastRenderTime = now;
+                        // 放行，执行真正的底层画面渲染
+                        originalUpdateRender.call(this, time); 
+                    }
+                    // 如果不到 16 毫秒（比如高刷屏在 8 毫秒时就叫醒了引擎），
+                    // 直接 return，什么都不做，丢弃这次无意义的渲染。
+                };
+                // ==========================================
+
+                // 启动初始场景
                 this.state.start('Boot');
             }
         }
@@ -113,9 +177,23 @@
 
     // --- 第三部分：点火运行 ---
     try {
-        console.log("正在初始化 Phaser 游戏引擎...");
+       if (window.game) {
+            
+            // 这一步会解绑旧实例的所有监听器，销毁它内部的 Canvas
+            window.game.destroy(); 
+            window.game = null;
+        }
+
+        // 2. 彻底清空容器，防止 HTML 节点残留
+        const container = document.getElementById('game-container');
+        if (container) {
+            container.innerHTML = ''; 
+        }
+
+        
+        // 3. 启动全新的实例
         const game = new Phaser.Game(gameConfig);
-        window.game = game; // 挂载到 window 方便调试
+        window.game = game;
     } catch (error) {
         console.error("❌ 游戏启动失败，详细原因：", error);
     }
