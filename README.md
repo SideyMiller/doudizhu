@@ -5,6 +5,8 @@
 斗地主游戏，后端基于Python+Tornado+MySQL开发，前端 Phaser 引擎（可打包为安卓应用）
 （此项目带有web3，环境依赖未列举全，请留意json）
 这个增量项目可选连接solanawallet，使用capacitor和clientlib-ktx:2.0.0，暂时解决了capacitor外壳下的mwa调用
+
+
 **Dependencies**
 
 * Python3.8+
