@@ -1,0 +1,215 @@
+{
+	"frames": {
+		"同意.png": {
+			"frame": {
+				"x": 2,
+				"y": 2,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"欢迎回来.png": {
+			"frame": {
+				"x": 4,
+				"y": 110,
+				"w": 213,
+				"h": 52
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 213,
+				"h": 52
+			},
+			"sourceSize": {
+				"w": 213,
+				"h": 52
+			}
+		},
+		"连接钱包.png": {
+			"frame": {
+				"x": 4,
+				"y": 170,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"不同意.png": {
+			"frame": {
+				"x": 4,
+				"y": 280,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"取消连接按钮.png": {
+			"frame": {
+				"x": 4,
+				"y": 390,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"许可协议.png": {
+			"frame": {
+				"x": 2,
+				"y": 498,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"隐私条款.png": {
+			"frame": {
+				"x": 2,
+				"y": 604,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"服务条款.png": {
+			"frame": {
+				"x": 2,
+				"y": 710,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		},
+		"隐私服务.png": {
+			"frame": {
+				"x": 4,
+				"y": 818,
+				"w": 213,
+				"h": 52
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 213,
+				"h": 52
+			},
+			"sourceSize": {
+				"w": 213,
+				"h": 52
+			}
+		},
+		"游客体验.png": {
+			"frame": {
+				"x": 4,
+				"y": 878,
+				"w": 210,
+				"h": 102
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 102
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 102
+			}
+		}
+	},
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "spritesheet.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 221,
+			"h": 984
+		},
+		"scale": "1"
+	}
+}
