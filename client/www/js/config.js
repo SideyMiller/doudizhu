@@ -4,3 +4,4 @@
 // export const WS_SERVER_URL = "wss://your-server-address.example.com";
 // 示例：
 export const WS_SERVER_URL = "wss://game.newdonediner.com/ws";
+// export const WS_SERVER_URL = "ws://localhost:8080/ws";

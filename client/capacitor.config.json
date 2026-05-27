@@ -1,5 +1,5 @@
 {
-  "appId": "com.newdonediner.doudizhu",
+  "appId": "com.newdonediner.com",
   "appName": "斗地主",
   "webDir": "www",
   "bundledWebRuntime": false,
@@ -8,11 +8,6 @@
     "androidScheme": "https",
     "cleartext": false,
     "allowNavigation": []
-  },
-  "plugins": {
-    "StatusBar": {
-      "hidden": true,
-      "overlaysWebView": true
-    }
   }
+  
 }

@@ -6,9 +6,9 @@ from functools import reduce
 from operator import mul
 from typing import Optional, List, Dict
 from typing import TYPE_CHECKING
-
+import uuid
 from tornado.ioloop import IOLoop
-
+from .DouZeroHelper import DouZeroHelper
 from models import Record
 from .protocol import Protocol as Pt
 from .rule import rule
@@ -118,7 +118,7 @@ class Room(object):
             # only allow [human robot robot]
             return
 
-        if nth == 1 and self.robot_no > 5:
+        if nth == 1 and self.robot_no > 10:
             # limit robot number
             return
 
@@ -127,7 +127,7 @@ class Room(object):
         p1.to_server(Pt.REQ_JOIN_ROOM, {'room': self.room_id, 'level': 1})
 
         if nth == 1:
-            IOLoop.current().call_later(3, self.add_robot, nth=2)
+            IOLoop.current().call_later(1.5, self.add_robot, nth=2)
             self.robot_no += 1
 
     def on_timeout(self):
@@ -136,7 +136,7 @@ class Room(object):
     def on_join(self, target: Player):
         if self._on_join(target):
             if self.allow_robot and self.level == 1:
-                IOLoop.current().call_later(10, self.add_robot, nth=1)
+                IOLoop.current().call_later(5, self.add_robot, nth=1)
             return True
         return False
 
@@ -147,11 +147,12 @@ class Room(object):
         if not self._is_rob_end():
             self.go_next_turn()
             return False
-
+    
         for i in range(3):
             # 每个人都抢地主, 第一个人是地主
             if self.turn_player.rob == 1 or i == 2:
                 self.turn_player.landlord = 1
+                
                 self.turn_player.push_pokers(self.pokers)
                 self.last_shot_seat = self.whose_turn
                 self.re_multiple()
@@ -166,7 +167,7 @@ class Room(object):
         except ModuleNotFoundError:
             self.pokers = list(range(1, 55))
             random.shuffle(self.pokers)
-            logging.info('RANDOM POKERS')
+            # logging.info('RANDOM POKERS')
 
         for i in range(3):
             self.players[i].push_pokers(self.pokers[i * 17: (i + 1) * 17])
@@ -183,7 +184,7 @@ class Room(object):
             }]
             if not player.is_left():
                 player.write_message(response)
-            logging.info('ROOM[%s] DEAL[%s]', self.room_id, response)
+            # logging.info('ROOM[%s] DEAL[%s]', self.room_id, response)
 
     def on_shot(self, seat: int, pokers: List[int]) -> str:
         if pokers:
@@ -222,7 +223,7 @@ class Room(object):
             GlobalVar.on_room_changed(self)
             return True
         except ValueError:
-            logging.error('Player[%d] NOT IN Room[%d]', target.uid, self.room_id)
+            # logging.error('Player[%d] NOT IN Room[%d]', target.uid, self.room_id)
             return False
 
     def on_game_over(self, winner: Player):
@@ -246,7 +247,7 @@ class Room(object):
                 'pokers': player.hand_pokers,
             })
         self.broadcast(response)
-        logging.info('Room[%d] GameOver', self.room_id)
+        # logging.info('Room[%d] GameOver', self.room_id)
 
         self.timer.stop_timing()
         IOLoop.current().add_callback(self.restart)

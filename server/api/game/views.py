@@ -46,13 +46,15 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
         return self.application.allow_robot
 
     async def data_received(self, chunk):
-        logging.info('Received stream data')
+        # logging.info('Received stream data')
+        pass
 
     # @authenticated
     async def open(self):
         # self.player = GlobalVar.find_player(**self.current_user)
         # self.player.socket = self
-        logging.info('SOCKET[0] 匿名连接成功')
+        # logging.info('SOCKET[0] 匿名连接成功')
+        pass
 
     async def on_message(self, message):
         if message == 'ping':
@@ -64,7 +66,7 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
             self.write_message([Protocol.ERROR, {'reason': 'Protocol cannot be resolved'}])
             return
 
-        logging.info('REQ[%d]: %s', self.uid, message)
+        # logging.info('REQ[%d]: %s', self.uid, message)
 
         if code == Protocol.REQ_ROOM_LIST:
             self.write_message([Protocol.RSP_ROOM_LIST, {'rooms': GlobalVar.room_list()}])
@@ -81,13 +83,12 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
                         account = User(openid=address, name=name, sex=1, avatar='')
                         session.add(account)
                         await session.commit()
-            
             account_dict = account.to_dict()
             
             # 2. 核心：现场绑定玩家身份！(把原先 open 里的活儿在这干了)
             self.player = GlobalVar.find_player(**account_dict)
             self.player.socket = self
-            logging.info('SOCKET[%s] 玩家登录成功并绑定', self.player.uid)
+            logging.info('SOCKET[%s] 玩家登录成功并绑定', self.player.name)
             
             # 3. 返回 RSP_LOGIN (101) 给客户端绘制大厅
             response_data = {
@@ -108,9 +109,10 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
     def on_close(self):
         if self.player:
             self.player.on_disconnect()
-            logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
+            # logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
         else:
-            logging.info('SOCKET[0] 匿名连接已断开')
+            # logging.info('SOCKET[0] 匿名连接已断开')
+            pass
 
     def check_origin(self, origin: str) -> bool:
         return True
@@ -127,9 +129,10 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
             return
         try:
             future = self.ws_connection.write_message(message, binary=binary)
-            logging.info('RSP[%d]: %s', self.uid, message)
+            # logging.info('RSP[%d]: %s', self.uid, message)
         except WebSocketClosedError:
-            logging.error('WebSockedClosed[%s][%s]', self.uid, message)
+            # logging.error('WebSockedClosed[%s][%s]', self.uid, message)
+            pass
 
     @staticmethod
     def decode_message(message):
@@ -138,7 +141,8 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
             if isinstance(code, int) and isinstance(packet, dict):
                 return code, packet
         except (json.decoder.JSONDecodeError, ValueError):
-            logging.error('ERROR MESSAGE: %s', message)
+            # logging.error('ERROR MESSAGE: %s', message)
+            pass
         return None, None
 
 

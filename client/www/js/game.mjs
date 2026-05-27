@@ -441,6 +441,19 @@ export class Game {
                 this.game.time.events.add(2000, gameOver, this);
                 break;
             }
+            case Protocol.RSP_LEAVE_ROOM:
+                // 服务器确认离开，现在才真正切场景
+                if (typeof observer !== 'undefined') {
+                    observer.clear();
+                }
+                this.game.tweens.removeAll();
+                if (window.musicOn && this.game.gameAudio['bg_room']) {
+                    if (window._bgMusic) window._bgMusic.stop();
+                    window._bgMusic = this.game.gameAudio['bg_room'];
+                    window._bgMusic.play('', 0, 1, true);
+                }
+                this.state.start('MainMenu');
+                break;
             // case Protocol.RSP_CHEAT:
             //     let seat = this.uidToSeat(packet[1]);
             //     this.players[seat].replacePoker(packet[2], 0);
@@ -712,29 +725,14 @@ export class Game {
     }
 
     quitGame() {
+        if (this.exitBtn) {
+        this.exitBtn.inputEnabled = false;
+        }
         if (this.socket && this.socket.websocket) {
-            // 注意：确保你的 Protocol 里有 REQ_LEAVE_ROOM 这个枚举，通常是 1002 或类似的数字
             this.send_message([Protocol.REQ_LEAVE_ROOM, {}]);
+            // 不要在这里 state.start('MainMenu')，等服务器回包
         }
-        
-        if (typeof observer !== 'undefined') {
-            observer.clear();
-        }
-        this.game.tweens.removeAll();
-        
-        if (window.musicOn && this.game.gameAudio['bg_room']){
-            // 先停掉当前正在播放的音乐
-            if (window._bgMusic) {
-                window._bgMusic.stop();
-            }
-            // 重新创建大厅音乐，【关键】必须把它赋值给 window._bgMusic
-            window._bgMusic = this.game.gameAudio['bg_room'];
-            // 播放它 (如果大厅音乐需要循环播放，可以在 play 里加参数，比如 play('', 0, 1, true))
-            window._bgMusic.play('', 0, 1, true);
             
-        }
-        this.state.start('MainMenu');
-        
     }
     switchTimer(seconds) {
         // 1. 全体闭嘴

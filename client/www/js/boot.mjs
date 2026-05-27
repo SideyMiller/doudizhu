@@ -1,9 +1,11 @@
 ﻿import {Protocol, Socket} from './net.mjs'
 import { WS_SERVER_URL } from './config.js';
 import { transact } from './solana-bundle.js';
+// import { registerPlugin } from 'https://unpkg.com/@capacitor/core@8.2.0/dist/index.js';
+// const WalletPlugin = registerPlugin('WalletPlugin');
 // 纯前端用户信息管理
-function getPlayerInfo() {
-    let info = localStorage.getItem('playerInfo');
+function getPlayerInfo(name) {
+    let info = localStorage.getItem(name);
     if (info) {
         try {
             return JSON.parse(info);
@@ -13,8 +15,8 @@ function getPlayerInfo() {
     return null;
 }
 
-function setPlayerInfo(info) {
-    localStorage.setItem('playerInfo', JSON.stringify(info));
+function setPlayerInfo(info, name) {
+    localStorage.setItem(name, JSON.stringify(info));
 }
 function get(url, payload, callback) {
     http('GET', url, payload, callback);
@@ -89,6 +91,8 @@ export class Preloader {
         this.preloadBar.scale.setTo(1.5, 1.5);
         this.load.setPreloadSprite(this.preloadBar);
 
+        // 添加一个文字提示，避免等待时黑屏卡顿感
+        
         // 先加载已有音频
         this.load.image('dizhu', 'i/dizhu.png');
         this.load.image('nongmin', 'i/nongming.png');
@@ -143,9 +147,9 @@ export class Preloader {
         }
         
         // 检查本地是否有用户信息
-        const playerInfo = getPlayerInfo();
+        const playerInfo = getPlayerInfo('playerInfo');
         if (playerInfo && playerInfo.uid) {
-            // 老用户：添加一个文字提示，避免等待时黑屏卡顿感
+            
             let loadingText = this.game.add.sprite(this.game.world.centerX, this.game.world.height - 150, 'text', '连接文本.png');
             
             loadingText.anchor.set(0.5);
@@ -166,7 +170,7 @@ export class Preloader {
                     if (code === Protocol.RSP_LOGIN) {
                         
                         response.openid = playerInfo.openid;
-                        setPlayerInfo(response); // 刷新本地缓存
+                        setPlayerInfo(response,'playerInfo'); // 刷新本地缓存
                         window.playerInfo = response;
                         
                         this.state.start('MainMenu'); // 网络已通，正式进入大厅
@@ -186,7 +190,7 @@ export class Preloader {
             
             }else {
                         // 新用户（无缓存）：直接跳过连网，进入 Login 场景走正常的生成钱包/游客注册流程
-                        console.log("没有本地缓存，前往注册页");
+                        
                         
                         this.state.start('Login');
                     }
@@ -245,6 +249,12 @@ export class MainMenu {
         localStorage.removeItem('playerInfo');
         window.playerInfo = null;
         
+        // 2. 关闭 WebSocket 连接
+        if (window.globalSocket) {
+            try { window.globalSocket.close(); } catch(e) {} 
+            window.globalSocket = null;
+        }
+
         // 3. 退回登录界面
         this.state.start('Login');
     }
@@ -364,13 +374,13 @@ export class MainMenu {
 
 export class Login {
     create() {
-        const SolanaPlugin = registerPlugin('SolanaPlugin');
+        
         this.stage.backgroundColor = '#182d3b';
-        let bg = this.game.add.sprite(this.game.width / 2, 0, 'bg');
-        bg.anchor.set(0.5, 0);
+        this.bg = this.game.add.sprite(this.game.width / 2, 0, 'bg');
+        this.bg.anchor.set(0.5, 0);
 
-        let scale = Math.max(this.game.width / bg.width, this.game.height / bg.height);
-        bg.scale.setTo(scale);
+        let scale = Math.max(this.game.width / this.bg.width, this.game.height / this.bg.height);
+        this.bg.scale.setTo(scale);
 
         this.game.add.plugin(PhaserInput.Plugin);
         // 放大1.5倍的文本框和按钮，字体36px
@@ -391,8 +401,39 @@ export class Login {
         let guestBtn = this.createMyTextBtn(this.game.world.centerX + 130, this.game.world.centerY + 100 * scaleFactor, 'sprite', () => this.showAgreement(true), '游客体验.png', '游客体验.png');
         this.game.world.add(guestBtn);
 
+       
+        
+        // if (!window.myListenerHandle) {
+        //     window.walletListenerAdded = true;
+        //     WalletPlugin.addListener('wallet_cache_ready', (data) => {
+                
+        //         // 直接存到 JS 能秒读的地方，不经过桥，不费电
+        //         window.NATIVE_CACHE_ADDRESS = data.address; 
+        //         localStorage.setItem('wallet_address', data.address);
+        //         this.checkWalletCache();
+        //     }).then(handle => {
+        //         window.myListenerHandle = handle; // 以后想关掉它得用这个 handle
+        //     });
+        // }
         
     }
+
+    checkWalletCache() {
+            // 1. 主动查档：去 Java 原生层问有没有存好的地址
+            const address = localStorage.getItem('wallet_address');
+            if (address) {
+                localStorage.setItem('wallet_address','');
+                this.initGame(address, getPlayerInfo('playerInfo')?.name); 
+            }
+            else
+            {
+                
+                return;
+            }
+            
+    }
+
+
     createMyTextBtn = (x, y, text, fn, name) => {
                 // 父辈：按钮底板图片 btnBG
                 let btn = this.game.add.sprite(x, y, text, name);
@@ -413,7 +454,7 @@ export class Login {
             this.showError('注册错误文本.png');
             return;
         }
-
+        setPlayerInfo({ name: userName }, 'playerInfo');
         if (this.isAgreementOpen) return;
         this.isAgreementOpen = true;
 
@@ -430,9 +471,9 @@ export class Login {
         this.agreementPanel.addChild(titleText);
 
         // 隐私与服务超链接按钮 (注意这里填入你的真实网页链接)
-        let privacyBtn = this.createMyTextBtn(0, -90,'sprite', () => { window.open('https://www.newdonediner.com/home/%E6%96%97%E5%9C%B0%E4%B8%BB-licenseprivacy', '_blank'); }, '隐私条款.png', '隐私条款.png');
-        let termsBtn = this.createMyTextBtn(0, -5, 'sprite', () => { window.open('https://www.newdonediner.com/home/%E6%96%97%E5%9C%B0%E4%B8%BB-licenseprivacy', '_blank'); }, '服务条款.png', '服务条款.png');
-        let mitbtn = this.createMyTextBtn(0, 80, 'sprite', () => { window.open('https://www.newdonediner.com/home/%E6%96%97%E5%9C%B0%E4%B8%BB-licenseprivacy', '_blank'); }, '许可协议.png', '许可协议.png');
+        let privacyBtn = this.createMyTextBtn(0, -90,'sprite', () => { window.open('https://www.newdonediner.com/mygame/%E6%96%97%E5%9C%B0%E4%B8%BB-privacy', '_blank'); }, '隐私条款.png', '隐私条款.png');
+        let termsBtn = this.createMyTextBtn(0, -5, 'sprite', () => { window.open('https://www.newdonediner.com/mygame/%E6%96%97%E5%9C%B0%E4%B8%BB-service', '_blank'); }, '服务条款.png', '服务条款.png');
+        let mitbtn = this.createMyTextBtn(0, 80, 'sprite', () => { window.open('https://www.newdonediner.com/mygame/%E6%96%97%E5%9C%B0%E4%B8%BB-license', '_blank'); }, '许可协议.png', '许可协议.png');
         privacyBtn.scale.setTo(0.8);
         termsBtn.scale.setTo(0.8);
         mitbtn.scale.setTo(0.8);
@@ -474,14 +515,14 @@ export class Login {
     }
 
     // --- 核心改动 3：分流处理钱包和游客的注册逻辑 ---
-    async executeLogin(isGuest, userName) {
+    executeLogin(isGuest, userName) {
         function generateFakeAddress() {
             const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
             let result = '';
             for (let i = 0; i < 5; i++) {
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
-            return 1111111;
+            return result;
         }
 
         let address = generateFakeAddress();
@@ -489,29 +530,31 @@ export class Login {
 
         // 如果不是游客且是手机端，尝试唤起 MWA
         if (!isGuest && isMobile) {
-            if (Capacitor.isNativePlatform()) {
-                try {
-                const result = await transact(async (wallet) => {
-                    const auth = await wallet.authorize({ identity: { name: '斗地主' } });
-                    return auth.accounts[0].address;
-                });
-                if (result) address = result;
-            } catch (e) {
-                console.warn("钱包调用失败或用户取消，改用游客模式:", e);
-            }
-                finally {
-                    // 无论成功失败都继续往下走，进入登录流程   
-                }
-            }
+                
+                const mwaConfig = {
+                name: "斗地主",
+                // 这是 MWA 要求的 Identity URL，填你游戏的官网或服务器域名（必须是 https）
+                identityUri: "https://cdn.newdonediner.com/", 
+                // 钱包授权页显示的图标，通常是相对于 identityUri 的路径
+                iconUri: "/icon.png"
+            };
+            WalletPlugin.authorize( mwaConfig );
+            
             
         }
-
+        else {
+            // 其他情况（游客，或者非手机端），直接走登录流程
+            this.initGame(address,userName);
+        }
+        
+    }
+    initGame(address, userName) {
+        let loadingText = this.game.add.sprite(this.game.world.centerX, this.game.world.centerY - 60 * 1.5, 'text', '连接文本.png');
+        loadingText.scale.setTo(1.5);
+        loadingText.anchor.set(0.5, 0.5);
+        loadingText.tint = 0xff0000;
         const playerInfo = { openid: address, name: String(userName) };
         
-        if (window.globalSocket) {
-            try { window.globalSocket.close(); } catch(e) {}
-            window.globalSocket = null;
-        }
             window.globalSocket = new Socket(WS_SERVER_URL);
             
             window.globalSocket.connect(
@@ -524,17 +567,19 @@ export class Login {
                     
                     if (code === Protocol.RSP_LOGIN) {
                         response.openid = playerInfo.openid;
-                        setPlayerInfo(response);
+                        setPlayerInfo(response,'playerInfo');
                         window.playerInfo = response;
                         this.state.start('MainMenu');
                     } 
                     else if (code === Protocol.ERROR) {
                         this.showError('登录失败.png');
+                       
                     }
                 },
                 (error) => { 
                     this.showError('连接失败.png');
                     console.error("WebSocket Error:", error);
+                    
                 }
             );
         
@@ -545,6 +590,11 @@ export class Login {
         this.game.input.onDown.removeAll();
         this.game.input.onUp.removeAll();
         this.game.input.onTap.removeAll();
+
+        if (window.myListenerHandle) {
+            window.myListenerHandle.remove(); // 拔掉管子
+            window.myListenerHandle = null;
+        }
        
         // 这样进入新场景时，就是一个绝对干净的白板
     }

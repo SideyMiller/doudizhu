@@ -1,19 +1,19 @@
 *.log
+
+# ===== Python =====
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 .pytest_cache
-
-# PyCharm
-.idea
 
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
-venv
-build
+venv/
+env/
+build/
 develop-eggs/
 dist/
 downloads/
@@ -24,8 +24,6 @@ eggs/
 *.egg
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -42,3 +40,43 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== Node.js =====
+node_modules/
+
+# ===== 敏感文件 (密钥/密码/证书) =====
+# Android 签名密钥库
+*.jks
+*.keystore
+
+# 服务端配置 (含数据库密码和 SECRET_KEY)
+server/config.py
+server/alembic.ini
+
+# Android 本地属性 (SDK 路径)
+client/android/local.properties
+
+# 环境变量文件
+.env
+.env.*
+
+# ===== 构建产物 =====
+# 前端构建输出
+client/www/
+
+# Android 构建缓存和产物
+client/android/.gradle/
+client/android/build/
+client/android/app/build/
+client/android/app/src/main/assets/public/
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+*.tmp

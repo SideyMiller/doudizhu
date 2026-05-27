@@ -18,37 +18,37 @@
 <div id="orientation" style="display:none;"></div>
 
 <script type="module">
-    (function() {
-            let textChangeCount = 0;
-            let canvasRedrawCount = 0;
+    // (function() {
+    //         let textChangeCount = 0;
+    //         let canvasRedrawCount = 0;
 
-            // 1. 拦截 Phaser 层的文本修改 (只统计有效修改)
-            const originalSetText = Phaser.Text.prototype.setText;
-            Phaser.Text.prototype.setText = function(text) {
-                if (this.text !== text) {
-                    textChangeCount++;
-                }
-                return originalSetText.call(this, text);
-            };
+    //         // 1. 拦截 Phaser 层的文本修改 (只统计有效修改)
+    //         const originalSetText = Phaser.Text.prototype.setText;
+    //         Phaser.Text.prototype.setText = function(text) {
+    //             if (this.text !== text) {
+    //                 textChangeCount++;
+    //             }
+    //             return originalSetText.call(this, text);
+    //         };
 
-            // 2. 拦截 PIXI 底层的 Canvas 重绘 (最耗 CPU、内存和触发 minor faults 的真凶)
-            if (typeof PIXI !== 'undefined' && PIXI.Text) {
-                const originalUpdateText = PIXI.Text.prototype.updateText;
-                PIXI.Text.prototype.updateText = function() {
-                    canvasRedrawCount++;
-                    originalUpdateText.call(this);
-                };
-            }
+    //         // 2. 拦截 PIXI 底层的 Canvas 重绘 (最耗 CPU、内存和触发 minor faults 的真凶)
+    //         if (typeof PIXI !== 'undefined' && PIXI.Text) {
+    //             const originalUpdateText = PIXI.Text.prototype.updateText;
+    //             PIXI.Text.prototype.updateText = function() {
+    //                 canvasRedrawCount++;
+    //                 originalUpdateText.call(this);
+    //             };
+    //         }
 
-            // 3. 每秒汇总一次输出，不刷屏不影响性能
-            setInterval(() => {
-                if (textChangeCount > 0 || canvasRedrawCount > 0) {
-                    console.log(`[底层重绘验证] 过去1秒: 文本被setText ${textChangeCount} 次 -> 导致底层Canvas彻底重绘并重新申请内存 ${canvasRedrawCount} 次`);
-                    textChangeCount = 0;
-                    canvasRedrawCount = 0;
-                }
-            }, 1000);
-        })();
+    //         // 3. 每秒汇总一次输出，不刷屏不影响性能
+    //         setInterval(() => {
+    //             if (textChangeCount > 0 || canvasRedrawCount > 0) {
+    //                 console.log(`[底层重绘验证] 过去1秒: 文本被setText ${textChangeCount} 次 -> 导致底层Canvas彻底重绘并重新申请内存 ${canvasRedrawCount} 次`);
+    //                 textChangeCount = 0;
+    //                 canvasRedrawCount = 0;
+    //             }
+    //         }, 1000);
+    //     })();
 
     // --- 第一部分：数据准备（兼容模式） ---
     var rawTemplateData = '{% raw payload %}';
@@ -68,50 +68,51 @@
     // 根据你之前 ls -R 的结果，我们需要引入 boot 和 game
     import { Boot, Preloader, Login, MainMenu } from './js/boot.mjs';
     import { Game } from './js/game.mjs';
-    const { App } = window.Capacitor.Plugins;
-    App.addListener('appStateChange', ({ isActive }) => {
-        if (typeof game === 'undefined' || !game) return;
-        if (!isActive) {
-            // 只要 App 失去活性（不管是切到钱包还是回桌面），强制全局静音
-            game.sound.mute = true; 
+    // const { App } = window.Capacitor.Plugins;
+    // App.addListener('appStateChange', ({ isActive }) => {
+        
+    //     if (typeof game === 'undefined' || !game) return;
+    //     if (!isActive) {
+    //         // 只要 App 失去活性（不管是切到钱包还是回桌面），强制全局静音
+    //         game.sound.mute = true; 
             
-        } else {
-            // 切回来，恢复声音
-            game.sound.mute = false;
+    //     } else {
+    //         // 切回来，恢复声音
+    //         game.sound.mute = false;
             
-            if (game.input) {
-                game.input.reset(); 
-            }
+    //         if (game.input) {
+    //             game.input.reset(); 
+    //         }
 
-            // 3. 核心：给浏览器发一个“伪装缩放”指令，强制它重新测绘画面和触摸区
-            window.dispatchEvent(new Event('resize'));
+    //         // 3. 核心：给浏览器发一个“伪装缩放”指令，强制它重新测绘画面和触摸区
+    //         window.dispatchEvent(new Event('resize'));
 
-            // 4. 强制夺回窗口焦点
-            window.focus();
+    //         // 4. 强制夺回窗口焦点
+    //         window.focus();
            
-            // 5. 暴力重绘（改变 1 像素透明度，逼 GPU 刷新）
-            document.body.style.opacity = '0.99';
-            setTimeout(() => { document.body.style.opacity = '1'; }, 50);
-            }
-    });
-    window.addEventListener('blur', () => {
-        // 只要窗口一丢焦点（不管丢多少），立刻静音
-        if (typeof game !== 'undefined' && game) {
-            game.sound.mute = true; 
+    //         // 5. 暴力重绘（改变 1 像素透明度，逼 GPU 刷新）
+    //         document.body.style.opacity = '0.99';
+    //         setTimeout(() => { document.body.style.opacity = '1'; }, 50);
+    //         }
+    // });
+    // window.addEventListener('blur', () => {
+    //     // 只要窗口一丢焦点（不管丢多少），立刻静音
+    //     if (typeof game !== 'undefined' && game) {
+    //         game.sound.mute = true; 
             
-        }
-    });
+    //     }
+    // });
 
-    window.addEventListener('focus', () => {
-        // 只要焦点回来，立刻恢复声音并重置触摸
-        if (typeof game !== 'undefined' && game) {
-            game.sound.mute = false; 
-            if (game.input) {
-                game.input.reset(); // 核心：瞬间解开锁死的触摸状态
-            }
+    // window.addEventListener('focus', () => {
+    //     // 只要焦点回来，立刻恢复声音并重置触摸
+    //     if (typeof game !== 'undefined' && game) {
+    //         game.sound.mute = false; 
+    //         if (game.input) {
+    //             game.input.reset(); // 核心：瞬间解开锁死的触摸状态
+    //         }
             
-        }
-    });
+    //     }
+    // });
     // --- 3. 初始化 Phaser CE (手动挡模式) ---
     // 参数说明：宽, 高, 渲染模式, 父容器ID
     // 2520x1080 是标准的 21:9 分辨率

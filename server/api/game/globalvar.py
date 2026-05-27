@@ -42,7 +42,7 @@ class GlobalVar(object):
     def new_room(cls, level: int, allow_robot: bool) -> Room:
         room = Room(cls.gen_room_id(), level, allow_robot)
         cls.__waiting_rooms__[room.room_id] = room
-        logging.info('ROOM[%s] CREATED', room)
+        # logging.info('ROOM[%s] CREATED', room)
         return room
 
     @classmethod
@@ -64,11 +64,11 @@ class GlobalVar(object):
         if room.is_full():
             cls.__waiting_rooms__.pop(room.room_id, None)
             cls.__playing_rooms__[room.room_id] = room
-            logging.info('Room[%s] FULL', room)
+            # logging.info('Room[%s] FULL', room)
         if room.is_empty():
             cls.__waiting_rooms__.pop(room.room_id, None)
             cls.__playing_rooms__.pop(room.room_id, None)
-            logging.info('Room[%s] CLOSED', room)
+            # logging.info('Room[%s] CLOSED', room)
 
     @classmethod
     def gen_room_id(cls) -> int:

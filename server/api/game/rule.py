@@ -253,7 +253,7 @@ class Rule(object):
             value = self.safe_index_of(self.rules[spec], cards)
             if value >= 0:
                 return spec, value
-        logging.error('Unknown Card Type: %s', cards)
+        # logging.error('Unknown Card Type: %s', cards)
         return '', 0
 
     @staticmethod

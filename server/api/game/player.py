@@ -1,10 +1,9 @@
 from __future__ import annotations
-
+from api.game.DouZeroHelper import DouZeroHelper
 import functools
 import logging
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Dict, Any
-
 from .protocol import Protocol as Pt
 from .rule import rule
 
@@ -45,7 +44,6 @@ class Player(object):
         self.room: Optional[Room] = None
         self.seat = -1
         self.state = State.INIT
-
         self._ready = 0
         self._leave = 0
 
@@ -98,19 +96,6 @@ class Player(object):
         if self.is_left():
             if self.handle_leave(code, packet):
                 return
-
-        if code == Pt.REQ_LEAVE_ROOM:
-            
-            if self.state in (State.CALL_SCORE, State.PLAYING):
-                # 1. 游戏中途逃跑 -> 触发原作者的“托管”机制
-                # 变成机器人继续打，不影响另外两个玩家
-                self.on_disconnect()  
-                logging.info('Player[%d] 游戏中途逃跑，转为托管状态', self.uid)
-            else:
-                self.handle_leave(Pt.REQ_JOIN_ROOM, {'room': -1})
-                logging.info('Player[%d] 正常退出房间，腾出座位', self.uid)
-            return
-
         if self.state == State.INIT:
             self.handle_init(code, packet)
         elif self.state == State.WAITING:
@@ -136,6 +121,23 @@ class Player(object):
             else:
                 self.on_message(Pt.REQ_SHOT_POKER, {'pokers': []})
 
+    def _do_leave_room(self):
+    
+        room = self.room
+        if room is None:
+            return
+
+        is_robot_room = room.has_robot()
+
+        # 机器人房间：清自己 + 顺带清所有机器人座位
+        # 纯真人房间：只清自己座位
+        room.on_leave(self, is_restart=is_robot_room)
+
+        self.room = None
+        self.state = State.INIT
+        self._ready = 0
+        self.write_message([Pt.RSP_LEAVE_ROOM, {'uid': self.uid}])
+
     def handle_leave(self, code: int, packet: Dict[str, Any]):
         from .globalvar import GlobalVar
         if code == Pt.REQ_JOIN_ROOM:
@@ -152,7 +154,7 @@ class Player(object):
             room = GlobalVar.find_room(room_id, level, self.allow_robot)
             if room.room_id == room_id:
                 self.room.sync_room()
-                logger.info('PLAYER[%s] REJOIN ROOM[%d]', self.uid, room.room_id)
+                # logger.info('PLAYER[%s] REJOIN ROOM[%d]', self.uid, room.room_id)
             else:
                 self.write_error('Room[%s] Not Found' % room_id)
         return True
@@ -166,11 +168,11 @@ class Player(object):
             self.state = State.WAITING
             if self.join_room(room):
                 self.room.sync_room()
-            logger.info('PLAYER[%s] JOIN ROOM[%d]', self.uid, room.room_id)
+            # logger.info('PLAYER[%s] JOIN ROOM[%d]', self.uid, room.room_id)
 
             if room.is_full():
                 GlobalVar.on_room_changed(room)
-                logger.info('ROOM[%s] FULL[%s]', room.room_id, room.players)
+                # logger.info('ROOM[%s] FULL[%s]', room.room_id, room.players)
         else:
             self.write_error('ERROR STATE[%s]' % self.state)
 
@@ -180,8 +182,12 @@ class Player(object):
             if self.room.is_ready():
                 self.change_state(State.CALL_SCORE)
                 self.room.on_deal_poker()
+        elif code == Pt.REQ_LEAVE_ROOM:
+            # 情况A：未开始/已准备 直接退
+            self._do_leave_room()
         else:
             self.write_error('STATE[%s]' % self.state)
+
 
     @shot_turn
     async def handle_call_score(self, code: int, packet: Dict[str, Any]):
@@ -190,9 +196,18 @@ class Player(object):
 
             is_end = self.room.on_rob(self)
             if is_end:
+                
                 self.change_state(State.PLAYING)
-                logger.info('ROB END LANDLORD[%s]', self.room.landlord)
+                
+                # ====== 塞入 DouZero 初始化逻辑 ======
+                import tornado.ioloop
+                tornado.ioloop.IOLoop.current().spawn_callback(
+                    DouZeroHelper.init_game, self.room
+                )
+                # ====================================
+                # logger.info('ROB END LANDLORD[%s]', self.room.landlord)
 
+            
             response = [Pt.RSP_CALL_SCORE, {
                 'uid': self.uid,
                 'rob': self.rob,
@@ -221,11 +236,18 @@ class Player(object):
             for p in pokers:
                 self._hand_pokers.remove(p)
 
+            if not str(self.uid or "").startswith('1000'):
+                # ====== 塞入 DouZero 初始化逻辑 ======
+                import tornado.ioloop
+                tornado.ioloop.IOLoop.current().spawn_callback(
+                    DouZeroHelper.sync_poker, self.room, self.seat, pokers, self
+                )
             self.room.broadcast([Pt.RSP_SHOT_POKER, {'uid': self.uid, 'pokers': pokers, 'multiple': self.room.multiple}])
-            logger.info('USER[%d] shot %s', self.uid, pokers)
+            # logger.info('USER[%d] shot %s', self.uid, pokers)
 
             if self._hand_pokers:
                 self.room.go_next_turn()
+                
             else:
                 self.change_state(State.GAME_OVER)
                 self.room.on_game_over(self)
@@ -246,7 +268,7 @@ class Player(object):
     def write_error(self, reason: str):
         if self.socket:
             self.socket.write_message([Pt.ERROR, {'reason': reason}])
-        logger.error('USER[%d][%s] %s', self.uid, self.state, reason)
+        # logger.error('USER[%d][%s] %s', self.uid, self.state, reason)
 
     @property
     def ready(self) -> int:

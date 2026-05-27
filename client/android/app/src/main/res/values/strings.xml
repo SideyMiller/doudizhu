@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">斗地主</string>
     <string name="title_activity_main">斗地主</string>
-    <string name="package_name">com.newdonediner.doudizhu</string>
-    <string name="custom_url_scheme">com.newdonediner.doudizhu</string>
+    <string name="package_name">com.newdonediner.com</string>
+    <string name="custom_url_scheme">com.newdonediner.com</string>
 </resources>
