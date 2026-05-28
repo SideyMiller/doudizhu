@@ -4,7 +4,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
 class DouZeroHelper:
     API_URL = "https://newdonediner-doudizhu-api.hf.space/"
-    HF_TOKEN = "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"
+    HF_TOKEN = ""
     _room_queues = {}
     @classmethod
     def _pokers_to_str(cls, pokers):
